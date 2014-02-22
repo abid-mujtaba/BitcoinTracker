@@ -1,10 +1,6 @@
 package com.abid_mujtaba.bitcoin.tracker;
 
 import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -49,9 +45,15 @@ public class MainActivity extends Activity
 
         switch (id)
         {
+            case R.id.start_fetch:
+
+                FetchPriceService.start(this);
+                break;
+
             case R.id.stop_fetch:
 
-                stop_fetch_service();
+                FetchPriceService.stop(this);
+                break;
         }
 
         return super.onOptionsItemSelected(item);
@@ -94,17 +96,5 @@ public class MainActivity extends Activity
 
         @Override
         public double getY() { return valueY; }
-    }
-
-
-    private void stop_fetch_service()           // Method used to stop the alarm from scheduling repeated FetchPriceService invocation
-    {
-        Intent intent = new Intent(this, FetchPriceService.class);                      // Intent to launch service
-        PendingIntent alarmIntent = PendingIntent.getService(this, 0, intent, 0);       // PendingIntent required by AlarmManager. This gives the AlarmManager permission to launch this Intent as if it were being launched by this application
-
-        AlarmManager amgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        amgr.cancel(alarmIntent);
-
-        Logd("Stopping FetchPriceService.");
     }
 }

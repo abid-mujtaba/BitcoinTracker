@@ -4,6 +4,10 @@
     tools:context="com.abid_mujtaba.bitcoin.tracker.MainActivity" >
 
     <item
+        android:id="@+id/start_fetch"
+        android:title="Start FetchPriceService"/>
+
+    <item
         android:id="@+id/stop_fetch"
         android:title="Stop FetchPriceService"/>
     
