@@ -16,8 +16,8 @@ import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 
-import static com.abid_mujtaba.bitcoin.tracker.Resources.Logd;
-import static com.abid_mujtaba.bitcoin.tracker.Resources.Loge;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -28,6 +28,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+
+import static com.abid_mujtaba.bitcoin.tracker.Resources.Logd;
+import static com.abid_mujtaba.bitcoin.tracker.Resources.Loge;
 
 
 /**
@@ -47,20 +50,17 @@ public class FetchPriceService extends IntentService
     protected void onHandleIntent(Intent intent)
     {
         String data = get_btc_price();
-        Logd("FetchPriceService: " + data);
 
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/bitcoin");
         dir.mkdirs();           // Make the directory along with all necessary parent directories if they don't already exist
 
         File file = new File(dir, "data.txt");
 
-        String time = "" + System.currentTimeMillis() / 1000;
-
         try
         {
             FileOutputStream fos = new FileOutputStream(file, true);        // We pass in true so that the text is appended
             PrintWriter pw = new PrintWriter(fos);
-            pw.println(time + "\n");
+            pw.println(data);
             pw.flush();
             pw.close();
             fos.close();
@@ -74,7 +74,7 @@ public class FetchPriceService extends IntentService
     public IBinder onBind(Intent intent) { return null; }
 
 
-    private static final int INTERVAL = 10 * 1000;          // Interval of time in milliseconds between launching the service
+    private static final int INTERVAL = 15 * 60 * 1000;          // Interval of time in milliseconds between launching the service
 
     public static void start(Context context)               // Method used to start service via AlarmManager
     {
@@ -101,20 +101,35 @@ public class FetchPriceService extends IntentService
 
     private String get_btc_price()
     {
-        final String url = "https://coinbase.com/api/v1/prices/buy";
+        final String buy_url = "https://coinbase.com/api/v1/prices/buy";
+        final String sell_url = "https://coinbase.com/api/v1/prices/sell";
 
         HttpClient client = getHttpClient();
-        HttpGet get = new HttpGet(url);
+        HttpGet buy_get = new HttpGet(buy_url);
+        HttpGet sell_get = new HttpGet(sell_url);
 
         long time = System.currentTimeMillis() / 1000;
+        float buy_price, sell_price;
 
         try
         {
-            HttpResponse response = client.execute(get);
+            // Fetch buy price from coinbase backend
+            HttpResponse response = client.execute(buy_get);
 
-            return HttpResponseToString(response);
+            JSONObject jResponse = new JSONObject( HttpResponseToString(response) );
+            buy_price = Float.parseFloat( jResponse.getString("amount") );
+
+
+            // Fetch sell price from coinbase backend
+            response = client.execute(sell_get);
+
+            jResponse = new JSONObject( HttpResponseToString(response) );
+            sell_price = Float.parseFloat( jResponse.getString("amount") );
+
+            return String.format("%d %.2f %.2f\n", time, buy_price, sell_price);
         }
         catch (IOException e) { Loge("GET failure.", e); }
+        catch (JSONException e) { Loge("Failed to convert GET response to JSON.", e); }
 
         return "";
     }
