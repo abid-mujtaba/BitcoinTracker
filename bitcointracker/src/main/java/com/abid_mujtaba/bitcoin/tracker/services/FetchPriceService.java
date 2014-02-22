@@ -37,7 +37,7 @@ import java.io.UnsupportedEncodingException;
 
 public class FetchPriceService extends IntentService
 {
-    private static final int INTERVAL = 15 * 1000;          // Interval of time in milliseconds between launching the service
+    private static final int INTERVAL = 5 * 60 * 1000;          // Interval of time in milliseconds between launching the service. (5 min)
 
 
     public FetchPriceService()
