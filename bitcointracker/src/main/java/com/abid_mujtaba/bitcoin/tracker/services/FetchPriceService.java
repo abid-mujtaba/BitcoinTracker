@@ -8,6 +8,10 @@ import android.content.Intent;
 import android.os.Environment;
 import android.os.IBinder;
 
+import com.abid_mujtaba.bitcoin.tracker.exceptions.NetworkException;
+import static com.abid_mujtaba.bitcoin.tracker.Resources.Logd;
+import static com.abid_mujtaba.bitcoin.tracker.Resources.Loge;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
@@ -29,9 +33,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 
-import static com.abid_mujtaba.bitcoin.tracker.Resources.Logd;
-import static com.abid_mujtaba.bitcoin.tracker.Resources.Loge;
-
 
 /**
  * This is the Service that runs in the background and fetches the Bitcoin prices from the coinbase
@@ -40,6 +41,9 @@ import static com.abid_mujtaba.bitcoin.tracker.Resources.Loge;
 
 public class FetchPriceService extends IntentService
 {
+    private static final int INTERVAL = 15 * 1000;          // Interval of time in milliseconds between launching the service
+
+
     public FetchPriceService()
     {
         super("FetchPriceService");
@@ -49,32 +53,34 @@ public class FetchPriceService extends IntentService
     @Override
     protected void onHandleIntent(Intent intent)
     {
-        String data = get_btc_price();
-
-        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/bitcoin");
-        dir.mkdirs();           // Make the directory along with all necessary parent directories if they don't already exist
-
-        File file = new File(dir, "data.txt");
-
         try
         {
-            FileOutputStream fos = new FileOutputStream(file, true);        // We pass in true so that the text is appended
-            PrintWriter pw = new PrintWriter(fos);
-            pw.println(data);
-            pw.flush();
-            pw.close();
-            fos.close();
+            String data = get_btc_price();
+
+            File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/bitcoin");
+            dir.mkdirs();           // Make the directory along with all necessary parent directories if they don't already exist
+
+            File file = new File(dir, "data.txt");
+
+            try
+            {
+                FileOutputStream fos = new FileOutputStream(file, true);        // We pass in true so that the text is appended
+                PrintWriter pw = new PrintWriter(fos);
+                pw.println(data);
+                pw.flush();
+                pw.close();
+                fos.close();
+            }
+            catch (FileNotFoundException e) { Loge("Error while writing to file.", e); }
+            catch (IOException e) { Loge("Error while writing to file.", e); }
         }
-        catch (FileNotFoundException e) { Loge("Error while writing to file.", e); }
-        catch (IOException e) { Loge("Error while writing to file.", e); }
+        catch (NetworkException e) { Loge("Error fetching bitcoin price from coinbase.", e); }
     }
 
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
 
-
-    private static final int INTERVAL = 15 * 60 * 1000;          // Interval of time in milliseconds between launching the service
 
     public static void start(Context context)               // Method used to start service via AlarmManager
     {
@@ -99,7 +105,7 @@ public class FetchPriceService extends IntentService
 
 
 
-    private String get_btc_price()
+    private String get_btc_price() throws NetworkException
     {
         final String buy_url = "https://coinbase.com/api/v1/prices/buy";
         final String sell_url = "https://coinbase.com/api/v1/prices/sell";
@@ -126,17 +132,15 @@ public class FetchPriceService extends IntentService
             jResponse = new JSONObject( HttpResponseToString(response) );
             sell_price = Float.parseFloat( jResponse.getString("amount") );
 
-            return String.format("%d %.2f %.2f\n", time, buy_price, sell_price);
+            return String.format("%d %.2f %.2f", time, buy_price, sell_price);
         }
-        catch (IOException e) { Loge("GET failure.", e); }
-        catch (JSONException e) { Loge("Failed to convert GET response to JSON.", e); }
-
-        return "";
+        catch (IOException e) { throw new NetworkException("GET failure.", e); }
+        catch (JSONException e) { throw new NetworkException("Failed to convert GET response to JSON.", e); }
     }
 
 
-    private static final int CONNECTION_TIMEOUT = 1000;
-    private static final int SOCKET_TIMEOUT = 1000;
+    private static final int CONNECTION_TIMEOUT = 5000;         // Timeouts before the app gives up and closes the socket and connection
+    private static final int SOCKET_TIMEOUT = 5000;
 
     private static HttpClient getHttpClient()       // Returns an HTTP client
     {
@@ -149,7 +153,7 @@ public class FetchPriceService extends IntentService
     }
 
 
-    private static String HttpResponseToString(HttpResponse response)
+    private static String HttpResponseToString(HttpResponse response) throws NetworkException
     {
         try
         {
@@ -169,9 +173,7 @@ public class FetchPriceService extends IntentService
 
             return sb.toString();
         }
-        catch (UnsupportedEncodingException e) { Loge("Error converting HttpResponse to String.", e); }
-        catch (IOException e) { Loge("Error converting HttpResponse to String.", e); }
-
-        return "";
+        catch (UnsupportedEncodingException e) { throw new NetworkException("Error converting HttpResponse to String.", e); }
+        catch (IOException e) { throw new NetworkException("Error converting HttpResponse to String.", e); }
     }
 }
