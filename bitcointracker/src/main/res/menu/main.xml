@@ -2,5 +2,9 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.abid_mujtaba.bitcoin.tracker.MainActivity" >
+
+    <item
+        android:id="@+id/stop_fetch"
+        android:title="Stop FetchPriceService"/>
     
 </menu>
