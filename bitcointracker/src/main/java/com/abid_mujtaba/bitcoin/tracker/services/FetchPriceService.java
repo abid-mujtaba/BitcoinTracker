@@ -5,12 +5,12 @@ import android.app.IntentService;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Environment;
 import android.os.IBinder;
 
+import com.abid_mujtaba.bitcoin.tracker.data.Data;
+import com.abid_mujtaba.bitcoin.tracker.exceptions.DataException;
 import com.abid_mujtaba.bitcoin.tracker.exceptions.NetworkException;
 import static com.abid_mujtaba.bitcoin.tracker.Resources.Logd;
-import static com.abid_mujtaba.bitcoin.tracker.Resources.Loge;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -24,13 +24,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 
 
@@ -57,24 +53,10 @@ public class FetchPriceService extends IntentService
         {
             String data = get_btc_price();
 
-            File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/bitcoin");
-            dir.mkdirs();           // Make the directory along with all necessary parent directories if they don't already exist
-
-            File file = new File(dir, "data.txt");
-
-            try
-            {
-                FileOutputStream fos = new FileOutputStream(file, true);        // We pass in true so that the text is appended
-                PrintWriter pw = new PrintWriter(fos);
-                pw.println(data);
-                pw.flush();
-                pw.close();
-                fos.close();
-            }
-            catch (FileNotFoundException e) { Loge("Error while writing to file.", e); }
-            catch (IOException e) { Loge("Error while writing to file.", e); }
+            Data.append(data);
         }
-        catch (NetworkException e) { Loge("Error fetching bitcoin price from coinbase.", e); }
+        catch (NetworkException e) { e.log(); }
+        catch (DataException e) { e.log(); }
     }
 
 

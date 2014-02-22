@@ -10,5 +10,8 @@
     <item
         android:id="@+id/stop_fetch"
         android:title="Stop FetchPriceService"/>
+
+    <item android:id="@+id/clear_data"
+          android:title="Clear Data"/>
     
 </menu>

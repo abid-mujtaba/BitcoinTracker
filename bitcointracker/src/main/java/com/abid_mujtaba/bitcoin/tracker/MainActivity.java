@@ -6,6 +6,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.LinearLayout;
 
+import com.abid_mujtaba.bitcoin.tracker.data.Data;
 import com.abid_mujtaba.bitcoin.tracker.services.FetchPriceService;
 import static com.abid_mujtaba.bitcoin.tracker.Resources.Logd;
 
@@ -54,6 +55,11 @@ public class MainActivity extends Activity
 
                 FetchPriceService.stop(this);
                 break;
+
+            case R.id.clear_data:
+
+                Data.clear();
+                break;
         }
 
         return super.onOptionsItemSelected(item);
@@ -62,16 +68,22 @@ public class MainActivity extends Activity
 
     private void graph()
     {
-        GraphViewSeries series = new GraphViewSeries(new GraphViewData[] {
-
-                new GraphViewData(1, 2.0d),
-                new GraphViewData(2, 1.5d),
-                new GraphViewData(3, 2.5d),
-                new GraphViewData(4, 1.0d)
-        });
+//        GraphViewSeries series = new GraphViewSeries(new GraphViewData[] {
+//
+//                new GraphViewData(1, 2.0d),
+//                new GraphViewData(2, 1.5d),
+//                new GraphViewData(3, 2.5d),
+//                new GraphViewData(4, 1.0d)
+//        });
 
         GraphView graphView = new LineGraphView(this, "BitCoin Prices");
-        graphView.addSeries(series);
+        graphView.setScalable(true);
+        graphView.setScrollable(true);
+
+//        graphView.addSeries(series);
+
+
+
 
         LinearLayout layout = (LinearLayout) findViewById(R.id.container);
         layout.addView(graphView);
