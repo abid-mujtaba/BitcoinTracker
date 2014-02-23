@@ -19,6 +19,12 @@ public class NetworkException extends Exception
 
         mMessage = msg;
         mThrowable = t;
+
+        try
+        {
+            Log.append( t );
+        }
+        catch (DataException e) { Loge("Error while logging exception.", e); }
     }
 
     public void log()
