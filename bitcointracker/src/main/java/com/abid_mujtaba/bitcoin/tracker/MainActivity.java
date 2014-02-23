@@ -1,6 +1,8 @@
 package com.abid_mujtaba.bitcoin.tracker;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Menu;
@@ -63,14 +65,34 @@ public class MainActivity extends Activity
 
             case R.id.clear_data:
 
-                if ( Data.clear() )         // Returns true if the deletion is successful
-                {
-                    Toast.makeText(this, "Data cleared.", Toast.LENGTH_SHORT).show();
-                }
-                else
-                {
-                    Toast.makeText(this, "Failed to clear data.", Toast.LENGTH_SHORT).show();
-                }
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+                builder.setTitle("Clear Data")
+                       .setMessage("Are you sure?");
+
+                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {         // If OK is pressed we clear data.
+
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i)
+                    {
+                        if ( Data.clear() )         // Returns true if the deletion is successful
+                        {
+                            Toast.makeText(MainActivity.this, "Data cleared.", Toast.LENGTH_SHORT).show();
+                        }
+                        else
+                        {
+                            Toast.makeText(MainActivity.this, "Failed to clear data.", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+
+                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {     // Do nothing if Cancel is pressed
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {}
+                });
+
+                AlertDialog dialog = builder.create();
+                dialog.show();
 
                 break;
         }
@@ -79,6 +101,9 @@ public class MainActivity extends Activity
     }
 
 
+    /**
+     * Source: http://android-graphview.org/
+     */
     private void graph()            // Method for reading the data and drawing the graph from it.
     {
         try

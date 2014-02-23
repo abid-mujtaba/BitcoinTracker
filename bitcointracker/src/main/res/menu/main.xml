@@ -5,11 +5,11 @@
 
     <item
         android:id="@+id/start_fetch"
-        android:title="Start FetchPriceService"/>
+        android:title="Start Acquisition"/>
 
     <item
         android:id="@+id/stop_fetch"
-        android:title="Stop FetchPriceService"/>
+        android:title="Stop Acquisition"/>
 
     <item android:id="@+id/clear_data"
           android:title="Clear Data"/>
