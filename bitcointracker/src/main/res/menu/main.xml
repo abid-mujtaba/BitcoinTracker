@@ -13,5 +13,7 @@
 
     <item android:id="@+id/clear_data"
           android:title="Clear Data"/>
-    
+
+    <item android:id="@+id/change_interval"
+          android:title="Change Interval"/>
 </menu>

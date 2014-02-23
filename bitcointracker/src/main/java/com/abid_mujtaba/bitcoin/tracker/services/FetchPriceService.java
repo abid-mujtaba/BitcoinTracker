@@ -121,8 +121,8 @@ public class FetchPriceService extends IntentService
     }
 
 
-    private static final int CONNECTION_TIMEOUT = 5000;         // Timeouts before the app gives up and closes the socket and connection
-    private static final int SOCKET_TIMEOUT = 5000;
+    private static final int CONNECTION_TIMEOUT = 1 * 60 * 1000;         // Timeouts before the app gives up and closes the socket and connection
+    private static final int SOCKET_TIMEOUT = 1 * 60 * 1000;
 
     private static HttpClient getHttpClient()       // Returns an HTTP client
     {

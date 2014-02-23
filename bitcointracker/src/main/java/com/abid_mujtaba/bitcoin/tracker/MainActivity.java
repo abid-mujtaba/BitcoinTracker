@@ -13,7 +13,6 @@ import android.widget.Toast;
 import com.abid_mujtaba.bitcoin.tracker.data.Data;
 import com.abid_mujtaba.bitcoin.tracker.exceptions.DataException;
 import com.abid_mujtaba.bitcoin.tracker.services.FetchPriceService;
-import static com.abid_mujtaba.bitcoin.tracker.Resources.Logd;
 
 import com.jjoe64.graphview.CustomLabelFormatter;
 import com.jjoe64.graphview.GraphViewDataInterface;
@@ -27,13 +26,17 @@ import java.util.List;
 
 public class MainActivity extends Activity
 {
+    private LinearLayout mLayout;
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-        graph();
+        mLayout = (LinearLayout) findViewById(R.id.container);
+
+        graph(1);
     }
 
 
@@ -61,6 +64,11 @@ public class MainActivity extends Activity
 
                 FetchPriceService.stop(this);
                 Toast.makeText(this, "FetchPriceService stopped.", Toast.LENGTH_SHORT).show();
+                break;
+
+            case R.id.change_interval:
+
+                change_interval();
                 break;
 
             case R.id.clear_data:
@@ -104,7 +112,7 @@ public class MainActivity extends Activity
     /**
      * Source: http://android-graphview.org/
      */
-    private void graph()            // Method for reading the data and drawing the graph from it.
+    private void graph(int factor)            // Method for reading the data and drawing the graph from it.
     {
         try
         {
@@ -123,10 +131,13 @@ public class MainActivity extends Activity
             long time;
             float buy_price, sell_price;
 
-            GraphViewData[] data_buy = new GraphViewData[length];               // Array used to populate the graph series
-            GraphViewData[] data_sell = new GraphViewData[length];
+            int reduced_length = length / factor;               // reduced length must be ceil( length / factor )
+            if (length % factor != 0) { reduced_length++; }
 
-            for (int ii = 0; ii < length; ii++)
+            GraphViewData[] data_buy = new GraphViewData[ reduced_length ];               // Array used to populate the graph series
+            GraphViewData[] data_sell = new GraphViewData[ reduced_length ];
+
+            for (int ii = 0, jj = 0; ii < length; ii += factor, jj++)         // We use factor to jump through the lines. Increasing factor means we introduce gaps in the data-points.
             {
                 line = lines.get(ii);
                 components = line.split(" ");                           // split line in to components delimited by space
@@ -135,8 +146,8 @@ public class MainActivity extends Activity
                 buy_price = Float.parseFloat(components[1]);
                 sell_price = Float.parseFloat(components[2]);
 
-                data_buy[ii] = new GraphViewData(time, buy_price);
-                data_sell[ii] = new GraphViewData(time, sell_price);
+                data_buy[jj] = new GraphViewData(time, buy_price);
+                data_sell[jj] = new GraphViewData(time, sell_price);
             }
 
             GraphViewSeries.GraphViewSeriesStyle buy_style = new GraphViewSeries.GraphViewSeriesStyle(Color.rgb(250, 50, 0), 2);            // Style to be used by graph
@@ -148,8 +159,7 @@ public class MainActivity extends Activity
             graphView.addSeries(buy_series);
             graphView.addSeries(sell_series);
 
-            LinearLayout layout = (LinearLayout) findViewById(R.id.container);
-            layout.addView(graphView);
+            mLayout.addView(graphView);
         }
         catch (DataException e) { e.log(); }
     }
@@ -176,9 +186,9 @@ public class MainActivity extends Activity
     }
 
 
-    private static final SimpleDateFormat dateFormatter = new SimpleDateFormat("MM-dd kk:mm");
+    private final SimpleDateFormat dateFormatter = new SimpleDateFormat("MM-dd kk:mm");
 
-    private static CustomLabelFormatter labelFormatter = new CustomLabelFormatter() {
+    private CustomLabelFormatter labelFormatter = new CustomLabelFormatter() {
 
         @Override
         public String formatLabel(double value, boolean isValueX)
@@ -190,6 +200,41 @@ public class MainActivity extends Activity
                 return dateFormatter.format( new Date(time) );
             }
             return null;
+        }
+    };
+
+
+    private int mChosenIntervalIndex = 0;             // The currently chosen interval
+    private AlertDialog intervalDialog;
+    private final String[] intervals = {"5 min", "10 min", "15 min", "30 min", "1 hr", "3 hr", "6 hr", "12 hr", "24 hr", "1 week", "1 month"};
+    private final int[] factors = {1, 2, 3, 6, 12, 36, 72, 144, 288, 2016, 8640};            // We define the multiplicative factor between the interval of time and the smallest interval defined: 5 min
+
+    private void change_interval()          // Method called when the user clicks the "Change Interval" button on the ActionBar menu
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Choose Interval");
+        builder.setSingleChoiceItems(intervals, mChosenIntervalIndex, intervalListener);     // We set items in the dialog as well as the item to be shown chosen
+
+        intervalDialog = builder.create();
+        intervalDialog.show();
+    }
+
+    private DialogInterface.OnClickListener intervalListener = new DialogInterface.OnClickListener() {
+
+        @Override
+        public void onClick(DialogInterface dialogInterface, int index)
+        {
+            intervalDialog.dismiss();
+
+            if (index != mChosenIntervalIndex)
+            {
+                mLayout.removeAllViews();               // Remove GraphView from LinearLayout
+
+                mChosenIntervalIndex = index;
+                int factor = factors[index];
+
+                graph(factor);          // Redraw graph with the new factor
+            }
         }
     };
 }
