@@ -13,11 +13,13 @@ import com.abid_mujtaba.bitcoin.tracker.exceptions.DataException;
 import com.abid_mujtaba.bitcoin.tracker.services.FetchPriceService;
 import static com.abid_mujtaba.bitcoin.tracker.Resources.Logd;
 
-import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.CustomLabelFormatter;
 import com.jjoe64.graphview.GraphViewDataInterface;
 import com.jjoe64.graphview.GraphViewSeries;
 import com.jjoe64.graphview.LineGraphView;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 
@@ -81,9 +83,12 @@ public class MainActivity extends Activity
     {
         try
         {
-            GraphView graphView = new LineGraphView(this, "BitCoin Prices");            // This is the view that is added to the layout to display the graph
+            LineGraphView graphView = new LineGraphView(this, "BitCoin Prices");            // This is the view that is added to the layout to display the graph
             graphView.setScalable(true);                                                // Allows the graph to be both scalable and scrollable
             graphView.setScrollable(true);
+            graphView.setDrawDataPoints(true);
+            graphView.setDataPointsRadius(5f);
+            graphView.setCustomLabelFormatter(labelFormatter);
 
             List<String> lines = Data.read();                                   // Read in the lines in the data file.
 
@@ -144,4 +149,22 @@ public class MainActivity extends Activity
         @Override
         public double getY() { return valueY; }
     }
+
+
+    private static final SimpleDateFormat dateFormatter = new SimpleDateFormat("MM-dd kk:mm");
+
+    private static CustomLabelFormatter labelFormatter = new CustomLabelFormatter() {
+
+        @Override
+        public String formatLabel(double value, boolean isValueX)
+        {
+            if (isValueX)
+            {
+                long time = (long) value * 1000;
+
+                return dateFormatter.format( new Date(time) );
+            }
+            return null;
+        }
+    };
 }
