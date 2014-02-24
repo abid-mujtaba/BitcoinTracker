@@ -14,6 +14,9 @@
     <item android:id="@+id/clear_data"
           android:title="Clear Data"/>
 
-    <item android:id="@+id/change_interval"
-          android:title="Change Interval"/>
+    <item android:id="@+id/sampling_interval"
+          android:title="Sampling Interval"/>
+
+    <item android:id="@+id/sampling_window"
+          android:title="Sampling Window"/>
 </menu>

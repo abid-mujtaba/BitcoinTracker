@@ -20,6 +20,7 @@ import com.jjoe64.graphview.GraphViewSeries;
 import com.jjoe64.graphview.LineGraphView;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -36,7 +37,7 @@ public class MainActivity extends Activity
 
         mLayout = (LinearLayout) findViewById(R.id.container);
 
-        graph(1);
+        graph(1, 86400);        // The default value is sampling factor of 1 and sampling window of 1 day.
     }
 
 
@@ -66,9 +67,14 @@ public class MainActivity extends Activity
                 Toast.makeText(this, "FetchPriceService stopped.", Toast.LENGTH_SHORT).show();
                 break;
 
-            case R.id.change_interval:
+            case R.id.sampling_interval:
 
-                change_interval();
+                change_sampling_interval();
+                break;
+
+            case R.id.sampling_window:
+
+                change_sampling_window();
                 break;
 
             case R.id.clear_data:
@@ -112,7 +118,7 @@ public class MainActivity extends Activity
     /**
      * Source: http://android-graphview.org/
      */
-    private void graph(int factor)            // Method for reading the data and drawing the graph from it.
+    private void graph(int factor, long window)            // Method for reading the data and drawing the graph from it.
     {
         try
         {
@@ -131,30 +137,39 @@ public class MainActivity extends Activity
             long time;
             float buy_price, sell_price;
 
-            int reduced_length = length / factor;               // reduced length must be ceil( length / factor )
-            if (length % factor != 0) { reduced_length++; }
+            long cutoff_time = (System.currentTimeMillis() / 1000) - window;          // Get current unix time in seconds and subtract the window to get the cut-off time for sampling
 
-            GraphViewData[] data_buy = new GraphViewData[ reduced_length ];               // Array used to populate the graph series
-            GraphViewData[] data_sell = new GraphViewData[ reduced_length ];
+            List<GraphViewData> data_buy = new ArrayList<GraphViewData>();              // We create lists of GraphViewData for buy and sell data
+            List<GraphViewData> data_sell = new ArrayList<GraphViewData>();
 
-            for (int ii = 0, jj = 0; ii < length; ii += factor, jj++)         // We use factor to jump through the lines. Increasing factor means we introduce gaps in the data-points.
+            for (int ii = 0; ii < length; ii += factor)         // We use factor to jump through the lines. Increasing factor means we introduce gaps in the data-points.
             {
                 line = lines.get(ii);
                 components = line.split(" ");                           // split line in to components delimited by space
 
                 time = Long.parseLong(components[0]);                   // Read in the data in the correct format (type)
-                buy_price = Float.parseFloat(components[1]);
-                sell_price = Float.parseFloat(components[2]);
 
-                data_buy[jj] = new GraphViewData(time, buy_price);
-                data_sell[jj] = new GraphViewData(time, sell_price);
+                if (time > cutoff_time)             // We graph the data only if it is ahead of the cutoff time
+                {
+                    buy_price = Float.parseFloat(components[1]);
+                    sell_price = Float.parseFloat(components[2]);
+
+                    data_buy.add( new GraphViewData(time, buy_price) );
+                    data_sell.add( new GraphViewData(time, sell_price) );
+                }
             }
 
+            GraphViewData[] array_buy = new GraphViewData[data_buy.size()];         // Create GraphViewData arrays to populate and then create GraphViewSeries
+            GraphViewData[] array_sell = new GraphViewData[data_sell.size()];
+
+            data_buy.toArray(array_buy);            // Populate the array
+            data_sell.toArray(array_sell);
+
             GraphViewSeries.GraphViewSeriesStyle buy_style = new GraphViewSeries.GraphViewSeriesStyle(Color.rgb(250, 50, 0), 2);            // Style to be used by graph
-            GraphViewSeries buy_series = new GraphViewSeries("Buy", buy_style, data_buy);
+            GraphViewSeries buy_series = new GraphViewSeries("Buy", buy_style, array_buy);
 
             GraphViewSeries.GraphViewSeriesStyle sell_style = new GraphViewSeries.GraphViewSeriesStyle(Color.rgb(50, 250, 0), 2);
-            GraphViewSeries sell_series = new GraphViewSeries("SEll", sell_style, data_sell);
+            GraphViewSeries sell_series = new GraphViewSeries("SEll", sell_style, array_sell);
 
             graphView.addSeries(buy_series);
             graphView.addSeries(sell_series);
@@ -206,13 +221,13 @@ public class MainActivity extends Activity
 
     private int mChosenIntervalIndex = 0;             // The currently chosen interval
     private AlertDialog intervalDialog;
-    private final String[] intervals = {"5 min", "10 min", "15 min", "30 min", "1 hr", "3 hr", "6 hr", "12 hr", "24 hr", "1 week", "1 month"};
+    private final String[] intervals = {"5 min", "10 min", "15 min", "30 min", "1 hour", "3 hours", "6 hours", "12 hours", "1 day", "1 week", "1 month"};
     private final int[] factors = {1, 2, 3, 6, 12, 36, 72, 144, 288, 2016, 8640};            // We define the multiplicative factor between the interval of time and the smallest interval defined: 5 min
 
-    private void change_interval()          // Method called when the user clicks the "Change Interval" button on the ActionBar menu
+    private void change_sampling_interval()          // Method called when the user clicks the "Change Interval" button on the ActionBar menu
     {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Choose Interval");
+        builder.setTitle("Choose Sampling Interval");
         builder.setSingleChoiceItems(intervals, mChosenIntervalIndex, intervalListener);     // We set items in the dialog as well as the item to be shown chosen
 
         intervalDialog = builder.create();
@@ -231,9 +246,42 @@ public class MainActivity extends Activity
                 mLayout.removeAllViews();               // Remove GraphView from LinearLayout
 
                 mChosenIntervalIndex = index;
-                int factor = factors[index];
 
-                graph(factor);          // Redraw graph with the new factor
+                graph(factors[index], windows[mChosenWindowIndex]);          // Redraw graph with the new factor
+            }
+        }
+    };
+
+
+    private int mChosenWindowIndex = 4;         // The default value of the window interval is 1 day.
+    private AlertDialog windowDialog;
+    private final String[] window_strings = {"1 hour", "3 hours", "6 hours", "12 hours", "1 day", "2 days", "1 week", "1 month", "ALL"};
+    private final long[] windows = {3600, 3 * 3600, 6 * 3600, 12 * 3600, 86400, 2 * 86400, 7 * 86400, 30 * 86400, Long.MAX_VALUE};
+
+    private void change_sampling_window()
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Choose Sampling window");
+        builder.setSingleChoiceItems(window_strings, mChosenWindowIndex, windowListener);
+
+        windowDialog = builder.create();
+        windowDialog.show();
+    }
+
+    private DialogInterface.OnClickListener windowListener = new DialogInterface.OnClickListener() {
+
+        @Override
+        public void onClick(DialogInterface dialogInterface, int index)
+        {
+            windowDialog.dismiss();
+
+            if (index != mChosenWindowIndex)
+            {
+                mLayout.removeAllViews();
+
+                mChosenWindowIndex = index;
+
+                graph(factors[mChosenIntervalIndex], windows[index]);
             }
         }
     };
