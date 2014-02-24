@@ -47,7 +47,7 @@ public class Log
         // First we convert the stacktrace to string:
         StringWriter sw = new StringWriter();
         t.printStackTrace(new PrintWriter(sw));
-        String log = Resources.time() + ":\n\n" + sw.toString() + "\n";
+        String log = Resources.time() + " :\n\n" + sw.toString() + "\n";
 
         File file = log_file();
 

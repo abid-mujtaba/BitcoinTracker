@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.UnknownHostException;
 
 
 /**
@@ -86,6 +87,7 @@ public class FetchPriceService extends IntentService
     }
 
 
+    private int exception_count = 0;
 
     private String get_btc_price() throws NetworkException
     {
@@ -115,6 +117,17 @@ public class FetchPriceService extends IntentService
             sell_price = Float.parseFloat( jResponse.getString("amount") );
 
             return String.format("%d %.2f %.2f", time, buy_price, sell_price);
+        }
+        catch (UnknownHostException e)
+        {
+            if (exception_count < 1)
+            {
+                exception_count++;
+                Logd("Failed to resolve host. Trying again.");
+
+                return get_btc_price();
+            }
+            else { throw new NetworkException("GET failure. Failed to fetch resolve host name.", e); }
         }
         catch (IOException e) { throw new NetworkException("GET failure.", e); }
         catch (JSONException e) { throw new NetworkException("Failed to convert GET response to JSON.", e); }

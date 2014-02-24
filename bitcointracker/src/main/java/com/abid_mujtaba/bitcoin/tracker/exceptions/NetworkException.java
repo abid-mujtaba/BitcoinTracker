@@ -22,7 +22,7 @@ public class NetworkException extends Exception
 
         try
         {
-            Log.append( t );
+            Log.append( this );         // We send the exception itself for appending the log.
         }
         catch (DataException e) { Loge("Error while logging exception.", e); }
     }
