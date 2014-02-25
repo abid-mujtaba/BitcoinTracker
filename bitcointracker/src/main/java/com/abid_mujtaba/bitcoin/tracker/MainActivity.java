@@ -2,8 +2,10 @@ package com.abid_mujtaba.bitcoin.tracker;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.graphics.Color;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -12,6 +14,7 @@ import android.widget.Toast;
 
 import com.abid_mujtaba.bitcoin.tracker.data.Data;
 import com.abid_mujtaba.bitcoin.tracker.exceptions.DataException;
+import com.abid_mujtaba.bitcoin.tracker.exceptions.NetworkException;
 import com.abid_mujtaba.bitcoin.tracker.services.FetchPriceService;
 
 import com.jjoe64.graphview.CustomLabelFormatter;
@@ -75,6 +78,11 @@ public class MainActivity extends Activity
             case R.id.sampling_window:
 
                 change_sampling_window();
+                break;
+
+            case R.id.current_price:
+
+                new FetchCurrentPriceTask().execute();
                 break;
 
             case R.id.clear_data:
@@ -285,4 +293,61 @@ public class MainActivity extends Activity
             }
         }
     };
+
+
+    private class FetchCurrentPriceTask extends AsyncTask<Void, Void, Void>
+    {
+        NetworkException mException;
+        private String buy_price, sell_price;
+
+        private ProgressDialog mProgressDialog;
+
+
+        @Override
+        protected void onPreExecute()
+        {
+            mProgressDialog = new ProgressDialog(MainActivity.this);            // Show ProgressDialog while fetching price from the backend
+            mProgressDialog.setMessage("Fetching price ...");
+            mProgressDialog.show();
+        }
+
+
+        @Override
+        protected Void doInBackground(Void... voids)
+        {
+            try
+            {
+                String data = FetchPriceService.get_btc_price();
+
+                String[] components = data.split(" ");
+                buy_price = components[1];
+                sell_price = components[2];
+            }
+            catch (NetworkException e) { mException = e; }
+
+            return null;
+        }
+
+
+        @Override
+        protected void onPostExecute(Void aVoid)
+        {
+            if (mException != null)
+            {
+                Toast.makeText(MainActivity.this, "Failed to fetch current bitcoin price.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            mProgressDialog.dismiss();      // Dismiss Progress Dialog before displaying the price using an AlertDialog
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+
+            builder.setTitle("Bitcoin Price")
+                   .setMessage( String.format("Buy:  $%s\n\nSell:  $%s", buy_price, sell_price) );
+
+            builder.setPositiveButton("OK", null);
+
+            builder.show();
+        }
+    }
 }
