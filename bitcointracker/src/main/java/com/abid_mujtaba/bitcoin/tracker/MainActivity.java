@@ -3,6 +3,7 @@ package com.abid_mujtaba.bitcoin.tracker;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.AsyncTask;
@@ -58,16 +59,9 @@ public class MainActivity extends Activity
 
         switch (id)
         {
-            case R.id.start_fetch:
+            case R.id.acquisition:
 
-                FetchPriceService.start(this);
-                Toast.makeText(this, "FetchPriceService started.", Toast.LENGTH_SHORT).show();
-                break;
-
-            case R.id.stop_fetch:
-
-                FetchPriceService.stop(this);
-                Toast.makeText(this, "FetchPriceService stopped.", Toast.LENGTH_SHORT).show();
+                control_acquisition();
                 break;
 
             case R.id.sampling_interval:
@@ -87,34 +81,8 @@ public class MainActivity extends Activity
 
             case R.id.clear_data:
 
-                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                clear_data();
 
-                builder.setTitle("Clear Data")
-                       .setMessage("Are you sure?");
-
-                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {         // If OK is pressed we clear data.
-
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i)
-                    {
-                        if ( Data.clear() )         // Returns true if the deletion is successful
-                        {
-                            Toast.makeText(MainActivity.this, "Data cleared.", Toast.LENGTH_SHORT).show();
-                        }
-                        else
-                        {
-                            Toast.makeText(MainActivity.this, "Failed to clear data.", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
-
-                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {     // Do nothing if Cancel is pressed
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {}
-                });
-
-                AlertDialog dialog = builder.create();
-                dialog.show();
 
                 break;
         }
@@ -349,5 +317,70 @@ public class MainActivity extends Activity
 
             builder.show();
         }
+    }
+
+
+    private void clear_data()           // Method for clearing the cached data
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        builder.setTitle("Clear Data")
+                .setMessage("Are you sure?");
+
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {         // If OK is pressed we clear data.
+
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i)
+            {
+                if ( Data.clear() )         // Returns true if the deletion is successful
+                {
+                    Toast.makeText(MainActivity.this, "Data cleared.", Toast.LENGTH_SHORT).show();
+                }
+                else
+                {
+                    Toast.makeText(MainActivity.this, "Failed to clear data.", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {     // Do nothing if Cancel is pressed
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {}
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+
+    private void control_acquisition()      // Method for starting and/or stopping the FetchPriceService
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("Bitcoin Data Acquisition");
+        builder.setItems(new String[] {"Start Acquisition", "Stop Acquisition"}, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialogInterface, int index)
+            {
+                Context context = MainActivity.this;
+
+                switch (index)
+                {
+                    case 0:
+
+                        FetchPriceService.start(context);
+                        Toast.makeText(context, "FetchPriceService started.", Toast.LENGTH_SHORT).show();
+                        break;
+
+                    case 1:
+
+                        FetchPriceService.stop(context);
+                        Toast.makeText(context, "FetchPriceService stopped.", Toast.LENGTH_SHORT).show();
+                        break;
+                }
+            }
+        });
+
+        builder.show();
     }
 }
