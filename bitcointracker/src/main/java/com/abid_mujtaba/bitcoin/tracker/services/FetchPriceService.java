@@ -104,12 +104,10 @@ public class FetchPriceService extends IntentService
 
     public static String get_btc_price() throws NetworkException
     {
-        final String buy_url = "https://coinbase.com/api/v1/prices/buy";
-        final String sell_url = "https://coinbase.com/api/v1/prices/sell";
+        final String url = "https://www.bitstamp.net/api/ticker/";
 
         HttpClient client = getHttpClient();
-        HttpGet buy_get = new HttpGet(buy_url);
-        HttpGet sell_get = new HttpGet(sell_url);
+        HttpGet get = new HttpGet(url);
 
         long time = System.currentTimeMillis() / 1000;
         float buy_price, sell_price;
@@ -117,17 +115,11 @@ public class FetchPriceService extends IntentService
         try
         {
             // Fetch buy price from coinbase backend
-            HttpResponse response = client.execute(buy_get);
+            HttpResponse response = client.execute(get);
 
             JSONObject jResponse = new JSONObject( HttpResponseToString(response) );
-            buy_price = Float.parseFloat( jResponse.getString("amount") );
-
-
-            // Fetch sell price from coinbase backend
-            response = client.execute(sell_get);
-
-            jResponse = new JSONObject( HttpResponseToString(response) );
-            sell_price = Float.parseFloat( jResponse.getString("amount") );
+            buy_price = Float.parseFloat( jResponse.getString("ask") );
+            sell_price = Float.parseFloat( jResponse.getString("bid") );
 
             return String.format("%d %.2f %.2f", time, buy_price, sell_price);
         }
