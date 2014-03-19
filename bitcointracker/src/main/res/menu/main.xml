@@ -19,13 +19,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.abid_mujtaba.bitcoin.tracker.MainActivity" >
 
-    <item
-        android:id="@+id/acquisition"
-        android:title="Acquisition"/>
-
-    <item android:id="@+id/clear_data"
-          android:title="Clear Data"/>
-
     <item android:id="@+id/sampling_interval"
           android:title="Sampling Interval"/>
 

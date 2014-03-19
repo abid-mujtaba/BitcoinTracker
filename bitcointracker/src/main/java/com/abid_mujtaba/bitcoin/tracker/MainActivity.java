@@ -75,11 +75,6 @@ public class MainActivity extends Activity
 
         switch (id)
         {
-            case R.id.acquisition:
-
-                control_acquisition();
-                break;
-
             case R.id.sampling_interval:
 
                 change_sampling_interval();
@@ -93,13 +88,6 @@ public class MainActivity extends Activity
             case R.id.current_price:
 
                 new FetchCurrentPriceTask().execute();
-                break;
-
-            case R.id.clear_data:
-
-                clear_data();
-
-
                 break;
         }
 

@@ -40,12 +40,6 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name="com.abid_mujtaba.bitcoin.tracker.services.FetchPriceService"
-            android:enabled="true"
-            android:exported="false" >
-        </service>
-
     </application>
 
 </manifest>
