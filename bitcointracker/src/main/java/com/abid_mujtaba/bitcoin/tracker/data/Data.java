@@ -19,6 +19,10 @@ package com.abid_mujtaba.bitcoin.tracker.data;
 import android.os.Environment;
 
 import com.abid_mujtaba.bitcoin.tracker.exceptions.DataException;
+import com.abid_mujtaba.bitcoin.tracker.network.Client;
+import com.abid_mujtaba.bitcoin.tracker.network.exceptions.ClientException;
+
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -40,6 +44,7 @@ public class Data
 {
     private static final String FOLDER = "bitcoin";
     private static final String FILENAME = "data.txt";
+    private static final String FETCH_URL = "http://www.abid-mujtaba.name:8080/bitcoin/api/since/%d/";
 
 
     private static File data_file()     // Method for getting File object handle on the local data file
@@ -103,5 +108,16 @@ public class Data
         }
         catch (FileNotFoundException e) { throw new DataException("File not found.", e); }
         catch (IOException e) { throw new DataException("IO error while reading file.", e); }
+    }
+
+
+    public static JSONObject fetch() throws ClientException
+    {
+        long now = System.currentTimeMillis() / 1000;
+        long threshold = now - (86400 * 2);             // Get unix time for two days ago
+
+        String url = String.format(FETCH_URL, threshold);
+
+        return Client.get_json(url);
     }
 }

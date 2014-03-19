@@ -19,7 +19,6 @@ package com.abid_mujtaba.bitcoin.tracker;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.AsyncTask;
@@ -30,8 +29,8 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.abid_mujtaba.bitcoin.tracker.data.Data;
-import com.abid_mujtaba.bitcoin.tracker.exceptions.DataException;
 import com.abid_mujtaba.bitcoin.tracker.exceptions.NetworkException;
+import com.abid_mujtaba.bitcoin.tracker.network.exceptions.ClientException;
 import com.abid_mujtaba.bitcoin.tracker.services.FetchPriceService;
 
 import com.jjoe64.graphview.CustomLabelFormatter;
@@ -39,10 +38,16 @@ import com.jjoe64.graphview.GraphViewDataInterface;
 import com.jjoe64.graphview.GraphViewSeries;
 import com.jjoe64.graphview.LineGraphView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import static com.abid_mujtaba.bitcoin.tracker.Resources.Loge;
 
 
 public class MainActivity extends Activity
@@ -100,63 +105,14 @@ public class MainActivity extends Activity
      */
     private void graph(int factor, long window)            // Method for reading the data and drawing the graph from it.
     {
-        try
-        {
-            LineGraphView graphView = new LineGraphView(this, "BitCoin Prices");            // This is the view that is added to the layout to display the graph
-            graphView.setScalable(true);                                                // Allows the graph to be both scalable and scrollable
-            graphView.setScrollable(true);
-            graphView.setDrawDataPoints(true);
-            graphView.setDataPointsRadius(5f);
-            graphView.setCustomLabelFormatter(labelFormatter);
+        LineGraphView graphView = new LineGraphView(this, "BitCoin Prices");            // This is the view that is added to the layout to display the graph
+        graphView.setScalable(true);                                                // Allows the graph to be both scalable and scrollable
+        graphView.setScrollable(true);
+        graphView.setDrawDataPoints(true);
+        graphView.setDataPointsRadius(5f);
+        graphView.setCustomLabelFormatter(labelFormatter);
 
-            List<String> lines = Data.read();                                   // Read in the lines in the data file.
-
-            int length = lines.size();
-            String line;
-            String[] components;
-            long time;
-            float buy_price, sell_price;
-
-            long cutoff_time = (System.currentTimeMillis() / 1000) - window;          // Get current unix time in seconds and subtract the window to get the cut-off time for sampling
-
-            List<GraphViewData> data_buy = new ArrayList<GraphViewData>();              // We create lists of GraphViewData for buy and sell data
-            List<GraphViewData> data_sell = new ArrayList<GraphViewData>();
-
-            for (int ii = 0; ii < length; ii += factor)         // We use factor to jump through the lines. Increasing factor means we introduce gaps in the data-points.
-            {
-                line = lines.get(ii);
-                components = line.split(" ");                           // split line in to components delimited by space
-
-                time = Long.parseLong(components[0]);                   // Read in the data in the correct format (type)
-
-                if (time > cutoff_time)             // We graph the data only if it is ahead of the cutoff time
-                {
-                    buy_price = Float.parseFloat(components[1]);
-                    sell_price = Float.parseFloat(components[2]);
-
-                    data_buy.add( new GraphViewData(time, buy_price) );
-                    data_sell.add( new GraphViewData(time, sell_price) );
-                }
-            }
-
-            GraphViewData[] array_buy = new GraphViewData[data_buy.size()];         // Create GraphViewData arrays to populate and then create GraphViewSeries
-            GraphViewData[] array_sell = new GraphViewData[data_sell.size()];
-
-            data_buy.toArray(array_buy);            // Populate the array
-            data_sell.toArray(array_sell);
-
-            GraphViewSeries.GraphViewSeriesStyle buy_style = new GraphViewSeries.GraphViewSeriesStyle(Color.rgb(250, 50, 0), 2);            // Style to be used by graph
-            GraphViewSeries buy_series = new GraphViewSeries("Buy", buy_style, array_buy);
-
-            GraphViewSeries.GraphViewSeriesStyle sell_style = new GraphViewSeries.GraphViewSeriesStyle(Color.rgb(50, 250, 0), 2);
-            GraphViewSeries sell_series = new GraphViewSeries("SEll", sell_style, array_sell);
-
-            graphView.addSeries(buy_series);
-            graphView.addSeries(sell_series);
-
-            mLayout.addView(graphView);
-        }
-        catch (DataException e) { e.log(); }
+        new FetchAndGraphDataTask(graphView).execute();
     }
 
 
@@ -324,67 +280,89 @@ public class MainActivity extends Activity
     }
 
 
-    private void clear_data()           // Method for clearing the cached data
+    private class FetchAndGraphDataTask extends AsyncTask<Void, Void, Void>
     {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        private ClientException mException;
+        private LineGraphView mGraphView;
 
-        builder.setTitle("Clear Data")
-                .setMessage("Are you sure?");
+        private JSONObject jResponse;
 
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {         // If OK is pressed we clear data.
+        public FetchAndGraphDataTask(LineGraphView graphView)
+        {
+            mGraphView = graphView;
+        }
 
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i)
+
+        @Override
+        protected Void doInBackground(Void... params)
+        {
+            try
             {
-                if ( Data.clear() )         // Returns true if the deletion is successful
-                {
-                    Toast.makeText(MainActivity.this, "Data cleared.", Toast.LENGTH_SHORT).show();
-                }
-                else
-                {
-                    Toast.makeText(MainActivity.this, "Failed to clear data.", Toast.LENGTH_SHORT).show();
-                }
+                jResponse = Data.fetch();
             }
-        });
+            catch (ClientException e) { mException = e; }
 
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {     // Do nothing if Cancel is pressed
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {}
-        });
-
-        AlertDialog dialog = builder.create();
-        dialog.show();
-    }
+            return null;
+        }
 
 
-    private void control_acquisition()      // Method for starting and/or stopping the FetchPriceService
-    {
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        builder.setTitle("Bitcoin Data Acquisition");
-        builder.setItems(new String[] {"Start Acquisition", "Stop Acquisition"}, new DialogInterface.OnClickListener() {
-
-            @Override
-            public void onClick(DialogInterface dialogInterface, int index)
+        @Override
+        protected void onPostExecute(Void aVoid)
+        {
+            if (mException != null)
             {
-                Context context = MainActivity.this;
+                Loge("Error while fetching JSON data from backend.", mException);
+                Toast.makeText(MainActivity.this, "Failed to fetch Data.", Toast.LENGTH_SHORT).show();
 
-                switch (index)
-                {
-                    case 0:
-
-                        FetchPriceService.start(context);
-                        Toast.makeText(context, "FetchPriceService started.", Toast.LENGTH_SHORT).show();
-                        break;
-
-                    case 1:
-
-                        FetchPriceService.stop(context);
-                        Toast.makeText(context, "FetchPriceService stopped.", Toast.LENGTH_SHORT).show();
-                        break;
-                }
+                return;
             }
-        });
 
-        builder.show();
+            try
+            {
+                JSONArray jArray = jResponse.getJSONArray("data");
+
+                int length = jArray.length();
+                JSONObject jData;
+                long time;
+                double buy_price, sell_price;
+
+                List<GraphViewData> data_buy = new ArrayList<GraphViewData>();              // We create lists of GraphViewData for buy and sell data
+                List<GraphViewData> data_sell = new ArrayList<GraphViewData>();
+
+                for (int ii = 0; ii < length; ii++)//= factor)         // We use factor to jump through the lines. Increasing factor means we introduce gaps in the data-points.
+                {
+                    jData = jArray.getJSONObject(ii);
+
+                    time = jData.getLong("t");
+                    buy_price = (Double) jData.get("b");
+                    sell_price = (Double) jData.get("s");
+
+                    data_buy.add( new GraphViewData(time, buy_price) );
+                    data_sell.add( new GraphViewData(time, sell_price) );
+                }
+
+                GraphViewData[] array_buy = new GraphViewData[data_buy.size()];         // Create GraphViewData arrays to populate and then create GraphViewSeries
+                GraphViewData[] array_sell = new GraphViewData[data_sell.size()];
+
+                data_buy.toArray(array_buy);            // Populate the array
+                data_sell.toArray(array_sell);
+
+                GraphViewSeries.GraphViewSeriesStyle buy_style = new GraphViewSeries.GraphViewSeriesStyle(Color.rgb(250, 50, 0), 2);            // Style to be used by graph
+                GraphViewSeries buy_series = new GraphViewSeries("Buy", buy_style, array_buy);
+
+                GraphViewSeries.GraphViewSeriesStyle sell_style = new GraphViewSeries.GraphViewSeriesStyle(Color.rgb(50, 250, 0), 2);
+                GraphViewSeries sell_series = new GraphViewSeries("SEll", sell_style, array_sell);
+
+                mGraphView.addSeries(buy_series);
+                mGraphView.addSeries(sell_series);
+
+                mLayout.addView(mGraphView);
+            }
+            catch (JSONException e)
+            {
+                Loge("JSON Error occurred while parsing JSON response.", e);
+                Toast.makeText(MainActivity.this, "Failed to fetch Data.", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 }
