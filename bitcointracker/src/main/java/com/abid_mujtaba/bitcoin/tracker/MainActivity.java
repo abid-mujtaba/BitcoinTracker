@@ -329,7 +329,7 @@ public class MainActivity extends Activity
                 List<GraphViewData> data_buy = new ArrayList<GraphViewData>();              // We create lists of GraphViewData for buy and sell data
                 List<GraphViewData> data_sell = new ArrayList<GraphViewData>();
 
-                for (int ii = 0; ii < length; ii++)//= factor)         // We use factor to jump through the lines. Increasing factor means we introduce gaps in the data-points.
+                for (int ii = 0; ii < length; ii++)
                 {
                     jData = jArray.getJSONObject(ii);
 
@@ -340,6 +340,13 @@ public class MainActivity extends Activity
                     data_buy.add( new GraphViewData(time, buy_price) );
                     data_sell.add( new GraphViewData(time, sell_price) );
                 }
+
+                // Calculate the ViewPort starting point and duration to show 6 hours worth of data.
+                long last_time = jArray.getJSONObject(length - 1).getLong("t");         // Get last time price was fetched, from the data.
+                long start = last_time - (6 * 3600);         // We will limit the view port to the last 6 hours
+
+                mGraphView.setViewPort(start, 6 * 3600);
+
 
                 GraphViewData[] array_buy = new GraphViewData[data_buy.size()];         // Create GraphViewData arrays to populate and then create GraphViewSeries
                 GraphViewData[] array_sell = new GraphViewData[data_sell.size()];
