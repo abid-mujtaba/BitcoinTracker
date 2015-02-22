@@ -20,6 +20,13 @@ import android.content.Context;
 
 import com.abid_mujtaba.bitcoin.tracker.network.exceptions.ClientException;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -54,6 +61,44 @@ public class Client
     // Socket and Connection timeouts (in milliseconds):
     private final static int CONNECTION_TIMEOUT = 2000;            // Timeout waiting for the connection to be established in the first place
     private final static int READ_TIMEOUT = 5000;                  // Timeout waiting for the response to be read from the server (once the connection has been established)
+    private static final int SOCKET_TIMEOUT = 3 * 1000;
+
+
+    public static String get_btc_price() throws ClientException
+    {
+        final String url = "https://www.bitstamp.net/api/ticker/";
+
+        HttpClient client = getHttpClient();
+        HttpGet get = new HttpGet(url);
+
+        long time = System.currentTimeMillis() / 1000;
+        float buy_price, sell_price;
+
+        try
+        {
+            // Fetch buy price from coinbase backend
+            HttpResponse response = client.execute(get);
+
+            JSONObject jResponse = new JSONObject( HttpResponseToString(response) );
+            buy_price = Float.parseFloat( jResponse.getString("ask") );
+            sell_price = Float.parseFloat( jResponse.getString("bid") );
+
+            return String.format("%d %.2f %.2f", time, buy_price, sell_price);
+        }
+        catch (IOException e) { throw new ClientException("GET failure.", e); }
+        catch (JSONException e) { throw new ClientException("Failed to convert GET response to JSON.", e); }
+    }
+
+
+    private static HttpClient getHttpClient()       // Returns an HTTP client
+    {
+        HttpParams params = new BasicHttpParams();
+
+        HttpConnectionParams.setConnectionTimeout(params, CONNECTION_TIMEOUT);
+        HttpConnectionParams.setSoTimeout(params, SOCKET_TIMEOUT);
+
+        return new DefaultHttpClient(params);
+    }
 
 
     public static JSONObject get_json(Context context, String url_string) throws ClientException
@@ -158,5 +203,30 @@ public class Client
         catch (KeyStoreException e) {throw new ClientException("SSL Error", e);}
         catch (NoSuchAlgorithmException e) {throw new ClientException("SSL Error", e);}
         catch (KeyManagementException e) {throw new ClientException("SSL Error", e);}
+    }
+
+
+    private static String HttpResponseToString(HttpResponse response) throws ClientException
+    {
+        try
+        {
+            InputStream is = response.getEntity().getContent();
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+
+            String line;
+            StringBuilder sb = new StringBuilder();
+
+            while ((line = br.readLine()) != null)
+            {
+                sb.append(line);
+            }
+
+            br.close();
+
+            return sb.toString();
+        }
+        catch (UnsupportedEncodingException e) { throw new ClientException("Error converting HttpResponse to String.", e); }
+        catch (IOException e) { throw new ClientException("Error converting HttpResponse to String.", e); }
     }
 }

@@ -29,9 +29,8 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.abid_mujtaba.bitcoin.tracker.data.Data;
-import com.abid_mujtaba.bitcoin.tracker.exceptions.NetworkException;
+import com.abid_mujtaba.bitcoin.tracker.network.Client;
 import com.abid_mujtaba.bitcoin.tracker.network.exceptions.ClientException;
-import com.abid_mujtaba.bitcoin.tracker.services.FetchPriceService;
 
 import com.jjoe64.graphview.CustomLabelFormatter;
 import com.jjoe64.graphview.GraphViewDataInterface;
@@ -213,7 +212,7 @@ public class MainActivity extends Activity
 
     private class FetchCurrentPriceTask extends AsyncTask<Void, Void, Void>
     {
-        NetworkException mException;
+        ClientException mException;
         private String buy_price, sell_price;
 
         private ProgressDialog mProgressDialog;
@@ -233,13 +232,13 @@ public class MainActivity extends Activity
         {
             try
             {
-                String data = FetchPriceService.get_btc_price();
+                String data = Client.get_btc_price();
 
                 String[] components = data.split(" ");
                 buy_price = components[1];
                 sell_price = components[2];
             }
-            catch (NetworkException e) { mException = e; }
+            catch (ClientException e) { mException = e; }
 
             return null;
         }
