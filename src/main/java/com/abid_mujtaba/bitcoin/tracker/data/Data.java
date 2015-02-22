@@ -16,6 +16,7 @@
 
 package com.abid_mujtaba.bitcoin.tracker.data;
 
+import android.content.Context;
 import android.os.Environment;
 
 import com.abid_mujtaba.bitcoin.tracker.exceptions.DataException;
@@ -112,13 +113,13 @@ public class Data
     }
 
 
-    public static JSONObject fetch() throws ClientException
+    public static JSONObject fetch(Context context) throws ClientException
     {
         long now = System.currentTimeMillis() / 1000;
         long threshold = now - (86400 * 4);             // Get unix time for four days ago
 
         String url = String.format(FETCH_URL, threshold);
 
-        return Client.get_json(url);
+        return Client.get_json(context, url);
     }
 }

@@ -16,6 +16,8 @@
 
 package com.abid_mujtaba.bitcoin.tracker.network;
 
+import android.content.Context;
+
 import com.abid_mujtaba.bitcoin.tracker.network.exceptions.ClientException;
 
 import org.json.JSONException;
@@ -29,8 +31,18 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.Certificate;
+import java.security.KeyStore;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 
 
 /**
@@ -44,24 +56,23 @@ public class Client
     private final static int READ_TIMEOUT = 5000;                  // Timeout waiting for the response to be read from the server (once the connection has been established)
 
 
-    public static JSONObject get_json(String url_string) throws ClientException
+    public static JSONObject get_json(Context context, String url_string) throws ClientException
     {
         try
         {
-            return new JSONObject(get(url_string));
+            return new JSONObject(get(context, url_string));
         }
         catch (JSONException e) { throw new ClientException("Failed to parse JSON response.", e); }
     }
 
 
-    private static String get(String url_string) throws ClientException
+    private static String get(Context context, String url_string) throws ClientException
     {
         HttpsURLConnection connection = null;            // NOTE: fetchImage is set up to use HTTP not HTTPS
 
         try
         {
-            URL url = new URL(url_string);
-            connection = (HttpsURLConnection) url.openConnection();
+            connection = setupSSL(context, url_string);
 
             connection.setConnectTimeout(CONNECTION_TIMEOUT);
             connection.setReadTimeout(READ_TIMEOUT);
@@ -106,5 +117,46 @@ public class Client
         }
         catch (UnsupportedEncodingException e) { throw new ClientException("Content InputStream has unsupported encoding.", e); }
         catch (IOException e) { throw new ClientException("IOException thrown by BufferedReader while reading InputStream.", e); }
+    }
+
+
+    // Make the app trust a self-signed SSL certificate.
+    // Source: http://littlesvr.ca/grumble/2014/07/21/android-programming-connect-to-an-https-server-with-self-signed-certificate/
+
+    // The tutorial needs only one modification. To get the X509 SSL certificate follow the instructions from: https://coderwall.com/p/wv6fpq/add-self-signed-ssl-certificate-to-android-for-browsing
+
+    private final static String SSL_CERT = "marzipan.whatbox.ca.crt";
+
+    public static HttpsURLConnection setupSSL(Context context, String url_string) throws ClientException
+    {
+        try
+        {
+            CertificateFactory cf = CertificateFactory.getInstance("X.509");
+            InputStream is = new BufferedInputStream(context.getAssets().open(SSL_CERT));
+
+            Certificate ca = cf.generateCertificate(is);
+
+            KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
+            keystore.load(null, null);
+            keystore.setCertificateEntry("ca", ca);
+
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init(keystore);
+
+            SSLContext sslcontext = SSLContext.getInstance("TLS");
+            sslcontext.init(null, tmf.getTrustManagers(), null);
+
+            // Tell the URLConnection to use a SocketFactory from our SSLContext
+            URL url = new URL(url_string);
+            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+            connection.setSSLSocketFactory(sslcontext.getSocketFactory());
+
+            return connection;
+        }
+        catch (CertificateException e) {throw new ClientException("SSL Error", e);}
+        catch (IOException e) {throw new ClientException("SSL Error", e);}
+        catch (KeyStoreException e) {throw new ClientException("SSL Error", e);}
+        catch (NoSuchAlgorithmException e) {throw new ClientException("SSL Error", e);}
+        catch (KeyManagementException e) {throw new ClientException("SSL Error", e);}
     }
 }

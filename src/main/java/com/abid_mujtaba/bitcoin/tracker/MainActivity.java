@@ -298,7 +298,7 @@ public class MainActivity extends Activity
         {
             try
             {
-                jResponse = Data.fetch();
+                jResponse = Data.fetch(MainActivity.this);
             }
             catch (ClientException e) { mException = e; }
 
