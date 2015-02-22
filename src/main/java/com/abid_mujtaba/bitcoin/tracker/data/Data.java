@@ -116,7 +116,7 @@ public class Data
     public static JSONObject fetch(Context context) throws ClientException
     {
         long now = System.currentTimeMillis() / 1000;
-        long threshold = now - (86400 * 4);             // Get unix time for four days ago
+        long threshold = now - (86400 * 7);             // Get unix time for seven days ago
 
         String url = String.format(FETCH_URL, threshold);
 

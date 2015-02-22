@@ -52,7 +52,13 @@ import static com.abid_mujtaba.bitcoin.tracker.Resources.Loge;
 
 public class MainActivity extends Activity
 {
-    private LinearLayout mLayout;
+    private LinearLayout uLayout;
+    private LineGraphView uGraphView;
+
+    private GraphViewData[] mBuy;
+    private GraphViewData[] mSell;
+
+    private long mLastTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -60,9 +66,23 @@ public class MainActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-        mLayout = (LinearLayout) findViewById(R.id.container);
+        uLayout = (LinearLayout) findViewById(R.id.container);
 
-        graph(1, 86400);        // The default value is sampling factor of 1 and sampling window of 1 day.
+        initialize();
+    }
+
+
+    private void initialize()
+    {
+        uGraphView = new LineGraphView(this, "BitCoin Prices");            // This is the view that is added to the layout to display the graph
+        
+        uGraphView.setScalable(true);                                                // Allows the uGraph to be both scalable and scrollable
+        uGraphView.setScrollable(true);
+        uGraphView.setDrawDataPoints(true);
+        uGraphView.setDataPointsRadius(5f);
+        uGraphView.setCustomLabelFormatter(labelFormatter);
+
+        new FetchAndGraphDataTask().execute();
     }
 
 
@@ -80,10 +100,6 @@ public class MainActivity extends Activity
 
         switch (id)
         {
-            case R.id.sampling_interval:
-
-                change_sampling_interval();
-                break;
 
             case R.id.sampling_window:
 
@@ -103,16 +119,22 @@ public class MainActivity extends Activity
     /**
      * Source: http://android-graphview.org/
      */
-    private void graph(int factor, long window)            // Method for reading the data and drawing the graph from it.
+    private void graph(long delta)            // Method for reading the data and drawing the graph from it.
     {
-        LineGraphView graphView = new LineGraphView(this, "BitCoin Prices");            // This is the view that is added to the layout to display the graph
-        graphView.setScalable(true);                                                // Allows the graph to be both scalable and scrollable
-        graphView.setScrollable(true);
-        graphView.setDrawDataPoints(true);
-        graphView.setDataPointsRadius(5f);
-        graphView.setCustomLabelFormatter(labelFormatter);
+        long start = mLastTime - delta;      // Calculate the starting time based on the last time received and the time delta specified
 
-        new FetchAndGraphDataTask(graphView).execute();
+        uGraphView.setViewPort(start, delta);
+
+        GraphViewSeries.GraphViewSeriesStyle buy_style = new GraphViewSeries.GraphViewSeriesStyle(Color.rgb(250, 50, 0), 2);            // Style to be used by graph
+        GraphViewSeries buy_series = new GraphViewSeries("Buy", buy_style, mBuy);
+
+        GraphViewSeries.GraphViewSeriesStyle sell_style = new GraphViewSeries.GraphViewSeriesStyle(Color.rgb(50, 250, 0), 2);
+        GraphViewSeries sell_series = new GraphViewSeries("SEll", sell_style, mSell);
+
+        uGraphView.addSeries(buy_series);
+        uGraphView.addSeries(sell_series);
+
+        uLayout.addView(uGraphView);
     }
 
 
@@ -155,44 +177,10 @@ public class MainActivity extends Activity
     };
 
 
-    private int mChosenIntervalIndex = 0;             // The currently chosen interval
-    private AlertDialog intervalDialog;
-    private final String[] intervals = {"5 min", "10 min", "15 min", "30 min", "1 hour", "3 hours", "6 hours", "12 hours", "1 day", "1 week", "1 month"};
-    private final int[] factors = {1, 2, 3, 6, 12, 36, 72, 144, 288, 2016, 8640};            // We define the multiplicative factor between the interval of time and the smallest interval defined: 5 min
-
-    private void change_sampling_interval()          // Method called when the user clicks the "Change Interval" button on the ActionBar menu
-    {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Choose Sampling Interval");
-        builder.setSingleChoiceItems(intervals, mChosenIntervalIndex, intervalListener);     // We set items in the dialog as well as the item to be shown chosen
-
-        intervalDialog = builder.create();
-        intervalDialog.show();
-    }
-
-    private DialogInterface.OnClickListener intervalListener = new DialogInterface.OnClickListener() {
-
-        @Override
-        public void onClick(DialogInterface dialogInterface, int index)
-        {
-            intervalDialog.dismiss();
-
-            if (index != mChosenIntervalIndex)
-            {
-                mLayout.removeAllViews();               // Remove GraphView from LinearLayout
-
-                mChosenIntervalIndex = index;
-
-                graph(factors[index], windows[mChosenWindowIndex]);          // Redraw graph with the new factor
-            }
-        }
-    };
-
-
-    private int mChosenWindowIndex = 4;         // The default value of the window interval is 1 day.
+    private int mChosenWindowIndex = 1;         // The default value of the window interval is 12 hours (to begin with)
     private AlertDialog windowDialog;
-    private final String[] window_strings = {"6 hours", "12 hours", "1 day", "2 days", "1 week", "1 month", "ALL"};
-    private final long[] windows = {6 * 3600, 12 * 3600, 86400, 2 * 86400, 7 * 86400, 30 * 86400, Long.MAX_VALUE};
+    private final String[] window_strings = {"6 hours", "12 hours", "1 day", "2 days", "4 days", "1 week", "ALL"};
+    private final long[] windows = {6 * 3600, 12 * 3600, 86400, 2 * 86400, 4 * 86400, 7 * 86400, Long.MAX_VALUE};
 
     private void change_sampling_window()
     {
@@ -213,11 +201,11 @@ public class MainActivity extends Activity
 
             if (index != mChosenWindowIndex)
             {
-                mLayout.removeAllViews();
+                uLayout.removeAllViews();
 
                 mChosenWindowIndex = index;
 
-                graph(factors[mChosenIntervalIndex], windows[index]);
+                graph(windows[index]);          // Redraw graph with the chosen time delta
             }
         }
     };
@@ -260,13 +248,13 @@ public class MainActivity extends Activity
         @Override
         protected void onPostExecute(Void aVoid)
         {
+            mProgressDialog.dismiss();      // Dismiss Progress Dialog before displaying the price using an AlertDialog
+
             if (mException != null)
             {
                 Toast.makeText(MainActivity.this, "Failed to fetch current bitcoin price.", Toast.LENGTH_SHORT).show();
                 return;
             }
-
-            mProgressDialog.dismiss();      // Dismiss Progress Dialog before displaying the price using an AlertDialog
 
             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 
@@ -283,15 +271,17 @@ public class MainActivity extends Activity
     private class FetchAndGraphDataTask extends AsyncTask<Void, Void, Void>
     {
         private ClientException mException;
-        private LineGraphView mGraphView;
+        private ProgressDialog mProgressDialog;
 
         private JSONObject jResponse;
 
-        public FetchAndGraphDataTask(LineGraphView graphView)
+        @Override
+        protected void onPreExecute()
         {
-            mGraphView = graphView;
+            mProgressDialog = new ProgressDialog(MainActivity.this);            // Show ProgressDialog while fetching price from the backend
+            mProgressDialog.setMessage("Fetching data ...");
+            mProgressDialog.show();
         }
-
 
         @Override
         protected Void doInBackground(Void... params)
@@ -309,6 +299,8 @@ public class MainActivity extends Activity
         @Override
         protected void onPostExecute(Void aVoid)
         {
+            mProgressDialog.dismiss();
+
             if (mException != null)
             {
                 Loge("Error while fetching JSON data from backend.", mException);
@@ -341,29 +333,16 @@ public class MainActivity extends Activity
                     data_sell.add( new GraphViewData(time, sell_price) );
                 }
 
+                mBuy = new GraphViewData[data_buy.size()];         // Create GraphViewData arrays to populate and then create GraphViewSeries
+                mSell = new GraphViewData[data_sell.size()];
+
+                data_buy.toArray(mBuy);            // Populate the array
+                data_sell.toArray(mSell);
+
                 // Calculate the ViewPort starting point and duration to show 6 hours worth of data.
-                long last_time = jArray.getJSONObject(length - 1).getLong("t");         // Get last time price was fetched, from the data.
-                long start = last_time - (6 * 3600);         // We will limit the view port to the last 6 hours
+                mLastTime = jArray.getJSONObject(length - 1).getLong("t");         // Get last time price was fetched, from the data.
 
-                mGraphView.setViewPort(start, 6 * 3600);
-
-
-                GraphViewData[] array_buy = new GraphViewData[data_buy.size()];         // Create GraphViewData arrays to populate and then create GraphViewSeries
-                GraphViewData[] array_sell = new GraphViewData[data_sell.size()];
-
-                data_buy.toArray(array_buy);            // Populate the array
-                data_sell.toArray(array_sell);
-
-                GraphViewSeries.GraphViewSeriesStyle buy_style = new GraphViewSeries.GraphViewSeriesStyle(Color.rgb(250, 50, 0), 2);            // Style to be used by graph
-                GraphViewSeries buy_series = new GraphViewSeries("Buy", buy_style, array_buy);
-
-                GraphViewSeries.GraphViewSeriesStyle sell_style = new GraphViewSeries.GraphViewSeriesStyle(Color.rgb(50, 250, 0), 2);
-                GraphViewSeries sell_series = new GraphViewSeries("SEll", sell_style, array_sell);
-
-                mGraphView.addSeries(buy_series);
-                mGraphView.addSeries(sell_series);
-
-                mLayout.addView(mGraphView);
+                graph(12 * 3600);       // We will limit the view port to the last 12 hours by default
             }
             catch (JSONException e)
             {
