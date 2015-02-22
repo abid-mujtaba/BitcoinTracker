@@ -191,8 +191,8 @@ public class MainActivity extends Activity
 
     private int mChosenWindowIndex = 4;         // The default value of the window interval is 1 day.
     private AlertDialog windowDialog;
-    private final String[] window_strings = {"1 hour", "3 hours", "6 hours", "12 hours", "1 day", "2 days", "1 week", "1 month", "ALL"};
-    private final long[] windows = {3600, 3 * 3600, 6 * 3600, 12 * 3600, 86400, 2 * 86400, 7 * 86400, 30 * 86400, Long.MAX_VALUE};
+    private final String[] window_strings = {"6 hours", "12 hours", "1 day", "2 days", "1 week", "1 month", "ALL"};
+    private final long[] windows = {6 * 3600, 12 * 3600, 86400, 2 * 86400, 7 * 86400, 30 * 86400, Long.MAX_VALUE};
 
     private void change_sampling_window()
     {

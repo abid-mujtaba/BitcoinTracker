@@ -44,7 +44,8 @@ public class Data
 {
     private static final String FOLDER = "bitcoin";
     private static final String FILENAME = "data.txt";
-    private static final String FETCH_URL = "http://www.abid-mujtaba.name:8080/bitcoin/api/since/%d/";
+
+    private static final String FETCH_URL = "https://marzipan.whatbox.ca:3983/bitcoin/api/since/%d/";
 
 
     private static File data_file()     // Method for getting File object handle on the local data file
@@ -114,7 +115,7 @@ public class Data
     public static JSONObject fetch() throws ClientException
     {
         long now = System.currentTimeMillis() / 1000;
-        long threshold = now - (86400 * 2);             // Get unix time for two days ago
+        long threshold = now - (86400 * 4);             // Get unix time for four days ago
 
         String url = String.format(FETCH_URL, threshold);
 

@@ -27,9 +27,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
+
+import javax.net.ssl.HttpsURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+
 
 /**
  * Encapsulates all network I/O associated with the Client functionality of the application.
@@ -54,12 +56,12 @@ public class Client
 
     private static String get(String url_string) throws ClientException
     {
-        HttpURLConnection connection = null;            // NOTE: fetchImage is set up to use HTTP not HTTPS
+        HttpsURLConnection connection = null;            // NOTE: fetchImage is set up to use HTTP not HTTPS
 
         try
         {
             URL url = new URL(url_string);
-            connection = (HttpURLConnection) url.openConnection();
+            connection = (HttpsURLConnection) url.openConnection();
 
             connection.setConnectTimeout(CONNECTION_TIMEOUT);
             connection.setReadTimeout(READ_TIMEOUT);
