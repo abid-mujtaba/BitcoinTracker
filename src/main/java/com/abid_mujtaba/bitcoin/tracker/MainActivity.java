@@ -29,6 +29,7 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.abid_mujtaba.bitcoin.tracker.data.Data;
+import com.abid_mujtaba.bitcoin.tracker.gcm.Gcm;
 import com.abid_mujtaba.bitcoin.tracker.network.Client;
 import com.abid_mujtaba.bitcoin.tracker.network.exceptions.ClientException;
 
@@ -46,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import static com.abid_mujtaba.bitcoin.tracker.Resources.Logd;
 import static com.abid_mujtaba.bitcoin.tracker.Resources.Loge;
 
 
@@ -67,19 +69,21 @@ public class MainActivity extends Activity
 
         uLayout = (LinearLayout) findViewById(R.id.container);
 
-        initialize();
-    }
+        initialize_gcm();
 
-
-    private void initialize()
-    {
         uGraphView = new LineGraphView(this, "BitCoin Prices");            // This is the view that is added to the layout to display the graph
-        
+
         uGraphView.setScalable(true);                                                // Allows the uGraph to be both scalable and scrollable
         uGraphView.setScrollable(true);
         uGraphView.setDrawDataPoints(true);
         uGraphView.setDataPointsRadius(5f);
         uGraphView.setCustomLabelFormatter(labelFormatter);
+    }
+
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
 
         new FetchAndGraphDataTask().execute();
     }
@@ -348,6 +352,20 @@ public class MainActivity extends Activity
                 Loge("JSON Error occurred while parsing JSON response.", e);
                 Toast.makeText(MainActivity.this, "Failed to fetch Data.", Toast.LENGTH_SHORT).show();
             }
+        }
+    }
+
+    private void initialize_gcm()
+    {
+        String reg_id = Gcm.getRegistrationId(MainActivity.this);
+
+        if (reg_id != null)
+        {
+            Logd("GCM Registration ID: " + reg_id);
+        }
+        else        // Registration ID is null so we register with the backend
+        {
+            Gcm.register(MainActivity.this);
         }
     }
 }
