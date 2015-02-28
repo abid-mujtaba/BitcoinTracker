@@ -21,6 +21,11 @@
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE"/>
+
+    <permission android:name="com.abid_mujtaba.bitcoin.tracker.permission.C2D_MESSAGE"
+                android:protectionLevel="signature"/>
+    <uses-permission android:name="com.abid_mujtaba.bitcoin.tracker.permission.C2D_MESSAGE"/>
 
     <application
         android:name=".BitcoinTrackerApplication"
@@ -39,6 +44,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".gcm.GcmBroadcastReceiver"
+            android:permission="com.google.android.c2dm.permission.SEND">
+
+            <intent-filter>
+                <action android:name="com.google.android.c2dm.intent.RECEIVE"/>
+                <category android:name="com.abid_mujtaba.bitcoin.tracker"/>
+            </intent-filter>
+
+        </receiver>
+
+        <service android:name=".gcm.GcmIntentService"/>
 
     </application>
 
