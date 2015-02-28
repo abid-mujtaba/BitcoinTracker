@@ -25,7 +25,7 @@
     <application
         android:name=".BitcoinTrackerApplication"
         android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@drawable/bitcoin"
         android:label="@string/app_name"
         android:theme="@style/AppTheme">
 
